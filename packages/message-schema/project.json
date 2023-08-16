@@ -1,0 +1,16 @@
+{
+  "name": "message-schema",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/message-schema/src",
+  "projectType": "library",
+  "targets": {
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/message-schema/**/*.ts"]
+      }
+    }
+  },
+  "tags": []
+}
