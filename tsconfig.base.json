@@ -15,7 +15,8 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@trivia-traitor/message-schema": ["packages/message-schema/src/index.ts"]
+      "@trivia-traitor/message-schema": ["packages/message-schema/src/index.ts"],
+      "@trivia-traitor/realtime-server": ["packages/realtime-server/src/main.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
