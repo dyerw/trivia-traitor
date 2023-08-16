@@ -17,6 +17,7 @@
     "@nxext/solid": "^16.2.0",
     "@types/jest": "^29.4.0",
     "@types/node": "18.7.1",
+    "@types/uuid": "^9.0.2",
     "@types/ws": "^8.5.5",
     "@typescript-eslint/eslint-plugin": "^5.60.1",
     "@typescript-eslint/parser": "^5.60.1",
@@ -46,7 +47,9 @@
   },
   "dependencies": {
     "axios": "^1.0.0",
+    "nact": "^7.6.2",
     "tslib": "^2.3.0",
+    "uuid": "^9.0.0",
     "ws": "^8.13.0"
   }
 }

@@ -1,11 +1,11 @@
 import { WebSocketServer } from 'ws';
+import { start } from 'nact';
+import { spawnConnectionHandler } from './actors/connection-handler';
+
+const system = start();
 
 const wss = new WebSocketServer({ port: 8080 });
 
 wss.on('connection', function connection(ws) {
-  ws.on('message', function message(data) {
-    console.log('received: %s', data);
-  });
-
-  ws.send('something');
+  spawnConnectionHandler(system, ws);
 });
