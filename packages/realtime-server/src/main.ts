@@ -9,6 +9,7 @@ import {
   joinLobby,
   subscribeToLobbyChanged,
   Lobby,
+  startGame,
 } from './lobbies-subject';
 import { tap } from 'rxjs';
 
@@ -34,6 +35,11 @@ const appRouter = router({
           subscription.unsubscribe();
         };
       });
+    }),
+  gameStart: publicProcedure
+    .input(z.object({ code: z.string() }))
+    .mutation((opts) => {
+      return startGame(opts.input.code);
     }),
 });
 
