@@ -1,9 +1,13 @@
 import { TRPCError, initTRPC } from '@trpc/server';
 import { CreateWSSContextFnOptions } from '@trpc/server/adapters/ws';
+import { createDispatch, createStore } from './state/store';
+
+const store = createStore();
 
 export const createWSContext = async (opts: CreateWSSContextFnOptions) => {
   const sid = opts.res['sid'];
-  return { sid, ws: opts.res };
+  const dispatch = createDispatch(sid, store);
+  return { sid, ws: opts.res, dispatch };
 };
 
 /**

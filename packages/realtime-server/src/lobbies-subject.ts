@@ -1,9 +1,8 @@
 import { BehaviorSubject, Observable, filter, switchMap } from 'rxjs';
 import { produce } from 'immer';
+import { v4 as uuidV4 } from 'uuid';
 
 type SessionId = string;
-type SessionStore = Set<SessionId>;
-export const sessionStore: SessionStore = new Set<SessionId>();
 
 type Game = {
   traitorNickname: string;
@@ -17,6 +16,10 @@ export type Lobby = {
 };
 
 type LobbiesState = Record<string, BehaviorSubject<Lobby>>;
+
+type ServerState = {
+  sessionIdToNicknames: Record<string, string>;
+};
 
 const initialLobbiesState: LobbiesState = {};
 

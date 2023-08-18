@@ -40,7 +40,13 @@ const appRouter = router({
   lobbyCreate: sessionProcedure
     .input(z.object({ nickname: z.string() }))
     .mutation(async (opts) => {
-      console.log(opts);
+      opts.ctx.dispatch({
+        type: 'CREATE_LOBBY',
+        payload: {
+          nickname: opts.input.nickname,
+          code: 'FOO',
+        },
+      });
       return createLobby(opts.input.nickname, opts.ctx.sid);
     }),
   lobbyJoin: sessionProcedure
