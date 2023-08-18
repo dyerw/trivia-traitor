@@ -1,11 +1,16 @@
 import { BehaviorSubject, Observable, filter, switchMap } from 'rxjs';
 import { produce } from 'immer';
 
+type SessionId = string;
+type SessionStore = Set<SessionId>;
+export const sessionStore: SessionStore = new Set<SessionId>();
+
 type Game = {
   traitorNickname: string;
 };
 
 export type Lobby = {
+  owner: SessionId;
   code: string;
   nicknames: string[];
   game?: Game;
@@ -17,9 +22,10 @@ const initialLobbiesState: LobbiesState = {};
 
 const lobbiesSubject = new BehaviorSubject<LobbiesState>(initialLobbiesState);
 
-export function createLobby(nickname: string): Lobby {
+export function createLobby(nickname: string, sessionId: SessionId): Lobby {
   const code = Math.random().toString(36).slice(2, 7);
   const lobby: Lobby = {
+    owner: sessionId,
     nicknames: [nickname],
     code,
   };
@@ -30,7 +36,6 @@ export function createLobby(nickname: string): Lobby {
   };
 
   lobbiesSubject.next(newLobbiesState);
-
   return lobby;
 }
 
@@ -56,6 +61,15 @@ export function subscribeToLobbyChanged(code: string): Observable<Lobby> {
     filter((lobbiesState) => !!lobbiesState[code]),
     switchMap((lobbiesState) => lobbiesState[code].asObservable())
   );
+}
+
+export function isLobbyOwner(code: string, owner: SessionId): boolean {
+  const lobby = lobbiesSubject.getValue()[code];
+  if (lobby === undefined) {
+    throw new Error('Lobby not found');
+  }
+
+  return lobby.getValue().owner === owner;
 }
 
 export function startGame(code: string): Game {

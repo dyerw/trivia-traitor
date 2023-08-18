@@ -1,5 +1,5 @@
 import { createSignal } from 'solid-js';
-import { getOtherPlayers, lobbyJoined } from '../store';
+import { getOtherPlayers, lobbyJoined, state } from '../store';
 import { useNavigate } from '@solidjs/router';
 
 import { client } from '../utils/trpc';
@@ -16,7 +16,14 @@ export default function Home() {
       console.warn('Invalid nickname');
       return;
     }
+    const sessionId = state.sessionId;
+    if (!sessionId) {
+      console.warn('Session ID is required');
+      return;
+    }
+
     const lobby = await client.lobbyCreate.mutate({
+      sessionId: state.sessionId || '', // empty string won't happen
       nickname: nicknameInput(),
     });
     lobbyJoined(nickname, lobby.code);
@@ -44,6 +51,7 @@ export default function Home() {
 
   return (
     <div>
+      <span>Your session id is: {state.sessionId}</span>
       <input
         placeholder="Lobby Code"
         value={lobbyCodeInput()}
