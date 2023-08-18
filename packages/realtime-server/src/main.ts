@@ -1,5 +1,11 @@
 import z from 'zod';
-import { router, publicProcedure } from './trpc';
+import {
+  router,
+  publicProcedure,
+  createWSContext,
+  createHTTPContext,
+  sessionProcedure,
+} from './trpc';
 import { observable } from '@trpc/server/observable';
 import ws from 'ws';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
@@ -9,9 +15,9 @@ import {
   subscribeToLobbyChanged,
   Lobby,
   startGame,
-  sessionStore,
   isLobbyOwner,
 } from './lobbies-subject';
+import cookie from 'cookie';
 
 import { tap } from 'rxjs';
 import { createHTTPServer } from '@trpc/server/adapters/standalone';
@@ -20,17 +26,17 @@ import { v4 as uuidV4 } from 'uuid';
 import { TRPCError } from '@trpc/server';
 
 const appRouter = router({
-  lobbyCreate: publicProcedure
-    .input(z.object({ nickname: z.string(), sessionId: z.string().uuid() }))
+  lobbyCreate: sessionProcedure
+    .input(z.object({ nickname: z.string() }))
     .mutation(async (opts) => {
-      return createLobby(opts.input.nickname, opts.input.sessionId);
+      return createLobby(opts.input.nickname, opts.ctx.sessionId);
     }),
-  lobbyJoin: publicProcedure
+  lobbyJoin: sessionProcedure
     .input(z.object({ nickname: z.string(), code: z.string() }))
     .mutation(async (opts) => {
       return joinLobby(opts.input.nickname, opts.input.code);
     }),
-  onLobbyChanged: publicProcedure
+  onLobbyChanged: sessionProcedure
     .input(z.object({ code: z.string() }))
     .subscription((opts) => {
       return observable<Lobby>((emit) => {
@@ -42,10 +48,10 @@ const appRouter = router({
         };
       });
     }),
-  gameStart: publicProcedure
-    .input(z.object({ code: z.string(), sessionId: z.string().uuid() }))
+  gameStart: sessionProcedure
+    .input(z.object({ code: z.string() }))
     .mutation((opts) => {
-      if (!isLobbyOwner(opts.input.code, opts.input.sessionId)) {
+      if (!isLobbyOwner(opts.input.code, opts.ctx.sessionId)) {
         throw new TRPCError({ code: 'UNAUTHORIZED' });
       }
       return startGame(opts.input.code);
@@ -53,19 +59,22 @@ const appRouter = router({
 });
 
 const sessionRouter = router({
-  sessionCreate: publicProcedure.mutation(() => {
+  registerSession: publicProcedure.mutation(async (opt) => {
     const sessionId = uuidV4();
-    sessionStore[sessionId] = {}; //TODO do we need an actual object
-    return {
-      sessionId,
-    };
+
+    opt.ctx.res.setHeader(
+      'Set-Cookie',
+      cookie.serialize('sessionId', sessionId)
+    );
   }),
 });
 
 export type SessionRouter = typeof sessionRouter;
+
 createHTTPServer({
   middleware: cors(),
   router: sessionRouter,
+  createContext: createHTTPContext,
 }).listen(3002);
 
 export type AppRouter = typeof appRouter;
@@ -73,7 +82,11 @@ export type AppRouter = typeof appRouter;
 const wss = new ws.Server({
   port: 3001,
 });
-const handler = applyWSSHandler({ wss, router: appRouter });
+const handler = applyWSSHandler({
+  wss,
+  router: appRouter,
+  createContext: createWSContext,
+});
 
 wss.on('connection', (ws) => {
   console.log(`++ Connection (${wss.clients.size})`);
