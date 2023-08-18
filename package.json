@@ -2,7 +2,9 @@
   "name": "@trivia-traitor/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "unused:show": "nx generate @trumbitta/nx-plugin-unused-deps:check --no-interactive"
+  },
   "private": true,
   "devDependencies": {
     "@nx/cypress": "16.7.0",
@@ -15,6 +17,7 @@
     "@nx/vite": "16.7.0",
     "@nx/workspace": "16.7.0",
     "@nxext/solid": "^16.2.0",
+    "@trumbitta/nx-plugin-unused-deps": "^1.12.1",
     "@types/jest": "^29.4.0",
     "@types/node": "18.7.1",
     "@types/uuid": "^9.0.2",
@@ -50,7 +53,6 @@
     "@trpc/client": "^10.37.1",
     "@trpc/server": "^10.37.1",
     "axios": "^1.0.0",
-    "cors": "^2.8.5",
     "immer": "^10.0.2",
     "rxjs": "^7.8.1",
     "tslib": "^2.3.0",

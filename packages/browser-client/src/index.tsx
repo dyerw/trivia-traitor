@@ -3,14 +3,17 @@ import { Router } from '@solidjs/router';
 
 import './index.css';
 import App from './App';
+import { WithSession } from './components/WithSession';
 
 const root = document.getElementById('root');
 if (root) {
   render(
     () => (
-      <Router>
-        <App />
-      </Router>
+      <WithSession>
+        <Router>
+          <App />
+        </Router>
+      </WithSession>
     ),
     root
   );

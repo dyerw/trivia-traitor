@@ -10,7 +10,6 @@ type Lobby = {
 type AppState = {
   // undefined if you have not joined lobby
   lobby?: Lobby;
-  sessionId?: string;
 };
 
 const initialState: AppState = {};
@@ -18,14 +17,6 @@ const initialState: AppState = {};
 const [_state, setStateStore] = createStore(initialState);
 
 export const state = _state;
-
-export const sessionIdCreated = (sessionId: string) => {
-  setStateStore(
-    produce((s) => {
-      s.sessionId = sessionId;
-    })
-  );
-};
 
 export const lobbyJoined = (
   nickname: string,
