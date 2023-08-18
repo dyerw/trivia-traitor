@@ -6,7 +6,6 @@ export default function Lobby() {
   const startGame = async () => {
     await client.gameStart.mutate({
       code: state.lobby?.lobbyCode || '',
-      sessionId: state?.sessionId || '',
     });
   };
   return (

@@ -1,10 +1,9 @@
 import z from 'zod';
 import {
   router,
-  publicProcedure,
   createWSContext,
-  createHTTPContext,
   sessionProcedure,
+  publicProcedure,
 } from './trpc';
 import { observable } from '@trpc/server/observable';
 import ws from 'ws';
@@ -17,19 +16,32 @@ import {
   startGame,
   isLobbyOwner,
 } from './lobbies-subject';
-import cookie from 'cookie';
 
 import { tap } from 'rxjs';
-import { createHTTPServer } from '@trpc/server/adapters/standalone';
-import cors from 'cors';
 import { v4 as uuidV4 } from 'uuid';
 import { TRPCError } from '@trpc/server';
 
 const appRouter = router({
+  registerSession: publicProcedure
+    .input(z.object({ sid: z.nullable(z.string()) }))
+    .mutation(async (opts) => {
+      // Already an sid attached to this websocket
+      if (opts.ctx.sid !== undefined) {
+        return opts.ctx.sid;
+      }
+
+      const sid = opts.input.sid ?? uuidV4();
+
+      // Not positive that this is the best place to keep the sid,
+      // but it's available in the context this way
+      opts.ctx.ws['sid'] = sid;
+      return sid;
+    }),
   lobbyCreate: sessionProcedure
     .input(z.object({ nickname: z.string() }))
     .mutation(async (opts) => {
-      return createLobby(opts.input.nickname, opts.ctx.sessionId);
+      console.log(opts);
+      return createLobby(opts.input.nickname, opts.ctx.sid);
     }),
   lobbyJoin: sessionProcedure
     .input(z.object({ nickname: z.string(), code: z.string() }))
@@ -51,31 +63,12 @@ const appRouter = router({
   gameStart: sessionProcedure
     .input(z.object({ code: z.string() }))
     .mutation((opts) => {
-      if (!isLobbyOwner(opts.input.code, opts.ctx.sessionId)) {
+      if (!isLobbyOwner(opts.input.code, opts.ctx.sid)) {
         throw new TRPCError({ code: 'UNAUTHORIZED' });
       }
       return startGame(opts.input.code);
     }),
 });
-
-const sessionRouter = router({
-  registerSession: publicProcedure.mutation(async (opt) => {
-    const sessionId = uuidV4();
-
-    opt.ctx.res.setHeader(
-      'Set-Cookie',
-      cookie.serialize('sessionId', sessionId)
-    );
-  }),
-});
-
-export type SessionRouter = typeof sessionRouter;
-
-createHTTPServer({
-  middleware: cors(),
-  router: sessionRouter,
-  createContext: createHTTPContext,
-}).listen(3002);
 
 export type AppRouter = typeof appRouter;
 

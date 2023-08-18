@@ -1,44 +1,25 @@
 import { TRPCError, initTRPC } from '@trpc/server';
-import { CreateHTTPContextOptions } from '@trpc/server/adapters/standalone';
 import { CreateWSSContextFnOptions } from '@trpc/server/adapters/ws';
-import cookie from 'cookie';
-import { IncomingMessage, ServerResponse } from 'http';
 
-type Context = {
-  req?: IncomingMessage;
-  res?: ServerResponse;
-  sessionId?: string;
-};
-
-export const createWSContext = async (
-  opts: CreateWSSContextFnOptions
-): Promise<Context> => {
-  const sessionId = cookie.parse(opts.req.headers.cookie).sessionId;
-
-  return { sessionId };
-};
-
-export const createHTTPContext = async (
-  opts: CreateHTTPContextOptions
-): Promise<Context> => {
-  const { req, res } = opts;
-  return { req, res };
+export const createWSContext = async (opts: CreateWSSContextFnOptions) => {
+  const sid = opts.res['sid'];
+  return { sid, ws: opts.res };
 };
 
 /**
  * Initialization of tRPC backend
  * Should be done only once per backend!
  */
-const t = initTRPC.context<Context>().create();
+const t = initTRPC.context<typeof createWSContext>().create();
 
 const hasSessionId = t.middleware(async (opts) => {
-  const { sessionId } = opts.ctx;
-  if (sessionId === undefined) {
+  const sid = opts.ctx.ws['sid'];
+  if (sid === undefined) {
     throw new TRPCError({ code: 'UNAUTHORIZED' });
   }
   return opts.next({
     ctx: {
-      sessionId,
+      sid,
     },
   });
 });
