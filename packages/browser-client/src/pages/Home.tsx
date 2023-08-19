@@ -38,7 +38,7 @@ export default function Home() {
     lobbyJoined(
       nickname,
       lobby.code,
-      getOtherPlayers(nickname, lobby.nicknames)
+      getOtherPlayers(nickname, lobby.otherNicknames)
     );
     navigate('/lobby', { replace: true });
   };

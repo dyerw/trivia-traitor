@@ -5,21 +5,13 @@ import {
   sessionProcedure,
   publicProcedure,
 } from './trpc';
-import { observable } from '@trpc/server/observable';
 import ws from 'ws';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
-import {
-  createLobby,
-  joinLobby,
-  subscribeToLobbyChanged,
-  Lobby,
-  startGame,
-  isLobbyOwner,
-} from './lobbies-subject';
+import logger from './logger';
 
-import { tap } from 'rxjs';
 import { v4 as uuidV4 } from 'uuid';
-import { TRPCError } from '@trpc/server';
+import { generateLobbyCode } from './utils';
+import { clientLobbySelector } from './state/selectors';
 
 const appRouter = router({
   registerSession: publicProcedure
@@ -27,13 +19,25 @@ const appRouter = router({
     .mutation(async (opts) => {
       // Already an sid attached to this websocket
       if (opts.ctx.sid !== undefined) {
+        logger.info(
+          'registerSession called with existing sessionId on websocket'
+        );
         return opts.ctx.sid;
+      }
+
+      if (opts.input.sid === undefined) {
+        logger.info('Generating new sessionId');
+      } else {
+        logger.info('Using sessionId supplied by client', {
+          sessionId: opts.input.sid,
+        });
       }
 
       const sid = opts.input.sid ?? uuidV4();
 
       // Not positive that this is the best place to keep the sid,
       // but it's available in the context this way
+      logger.info('Assigning sid to websocket', { sid });
       opts.ctx.ws['sid'] = sid;
       return sid;
     }),
@@ -44,35 +48,30 @@ const appRouter = router({
         type: 'CREATE_LOBBY',
         payload: {
           nickname: opts.input.nickname,
-          code: 'FOO',
+          code: generateLobbyCode(),
         },
       });
-      return createLobby(opts.input.nickname, opts.ctx.sid);
+      return opts.ctx.select(clientLobbySelector);
     }),
   lobbyJoin: sessionProcedure
     .input(z.object({ nickname: z.string(), code: z.string() }))
     .mutation(async (opts) => {
-      return joinLobby(opts.input.nickname, opts.input.code);
-    }),
-  onLobbyChanged: sessionProcedure
-    .input(z.object({ code: z.string() }))
-    .subscription((opts) => {
-      return observable<Lobby>((emit) => {
-        const lobby$ = subscribeToLobbyChanged(opts.input.code);
-        const subscription = lobby$.pipe(tap(emit.next)).subscribe();
-
-        return () => {
-          subscription.unsubscribe();
-        };
+      opts.ctx.dispatch({
+        type: 'JOIN_LOBBY',
+        payload: {
+          nickname: opts.input.nickname,
+          code: opts.input.code,
+        },
       });
+      return opts.ctx.select(clientLobbySelector);
     }),
+  onLobbyChanged: sessionProcedure.subscription((opts) => {
+    return opts.ctx.observe(clientLobbySelector);
+  }),
   gameStart: sessionProcedure
     .input(z.object({ code: z.string() }))
     .mutation((opts) => {
-      if (!isLobbyOwner(opts.input.code, opts.ctx.sid)) {
-        throw new TRPCError({ code: 'UNAUTHORIZED' });
-      }
-      return startGame(opts.input.code);
+      // TODO: Re-implement in redux w/e
     }),
 });
 
@@ -88,14 +87,16 @@ const handler = applyWSSHandler({
 });
 
 wss.on('connection', (ws) => {
-  console.log(`++ Connection (${wss.clients.size})`);
+  logger.info('Websocket connected', { numberOfClients: wss.clients.size });
   ws.once('close', () => {
-    console.log(`-- Connection (${wss.clients.size})`);
+    logger.info('Websocket disconnected', {
+      numberOfClients: wss.clients.size,
+    });
   });
 });
-console.log('✅ WebSocket Server listening on ws://localhost:3001');
+logger.info('WebSocket Server listening on ws://localhost:3001');
 process.on('SIGTERM', () => {
-  console.log('SIGTERM');
+  logger.info('Received SIGTERM');
   handler.broadcastReconnectNotification();
   wss.close();
 });
