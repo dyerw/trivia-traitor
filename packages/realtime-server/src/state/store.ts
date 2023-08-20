@@ -12,6 +12,7 @@ import {
   sessionsReducer,
 } from './sessions';
 import { LobbiesState, initialLobbiesState, lobbiesReducer } from './lobbies';
+import logger from '../logger';
 
 export type State = {
   sessions: SessionsState;
@@ -42,8 +43,11 @@ export const createSelect =
 
 export const createDispatch =
   (sessionId: string, store: Store) => (action: Action) => {
-    console.log('DISPATCH: ', JSON.stringify(action));
-    store.next(reducer(store.getValue(), action, sessionId));
+    const nextState = reducer(store.getValue(), action, sessionId);
+    logger.info('Action dispatched', {
+      action: action,
+    });
+    store.next(nextState);
   };
 
 export const createObserve =

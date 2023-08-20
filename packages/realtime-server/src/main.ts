@@ -12,7 +12,8 @@ import http from 'http';
 
 import { v4 as uuidV4 } from 'uuid';
 import { generateLobbyCode } from './utils';
-import { clientLobbySelector } from './state/selectors';
+import { webSocketSelector, clientLobbySelector } from './state/selectors';
+import { TRPCError } from '@trpc/server';
 
 const appRouter = router({
   registerSession: publicProcedure
@@ -29,6 +30,20 @@ const appRouter = router({
       if (opts.input.sid === undefined) {
         logger.info('Generating new sessionId');
       } else {
+        // Check that session id isn't used by an existing connection
+        const websocket = opts.ctx.select(webSocketSelector);
+        if (
+          websocket !== undefined &&
+          websocket.readyState === ws.WebSocket.OPEN
+        ) {
+          logger.info(
+            `Websocket connection rejected because SessionID ${opts.input.sid} in use by open Websocket`
+          );
+          throw new TRPCError({
+            message: 'SessionID already in use by open websocket',
+            code: 'BAD_REQUEST',
+          });
+        }
         logger.info('Using sessionId supplied by client', {
           sessionId: opts.input.sid,
         });
@@ -39,6 +54,10 @@ const appRouter = router({
       // Not positive that this is the best place to keep the sid,
       // but it's available in the context this way
       logger.info('Assigning sid to websocket', { sid });
+      opts.ctx.dispatch({
+        type: 'SESSION_CONNECT',
+        payload: { websocket: opts.ctx.ws },
+      });
       opts.ctx.ws['sid'] = sid;
       return sid;
     }),

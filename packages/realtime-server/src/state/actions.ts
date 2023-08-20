@@ -1,4 +1,12 @@
+import { WebSocket } from 'ws';
+
 export type Action =
+  | {
+      type: 'SESSION_CONNECT';
+      payload: {
+        websocket: WebSocket;
+      };
+    }
   | {
       type: 'CREATE_LOBBY';
       payload: {

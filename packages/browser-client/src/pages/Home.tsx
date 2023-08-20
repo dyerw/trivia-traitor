@@ -1,5 +1,5 @@
 import { createSignal } from 'solid-js';
-import { getOtherPlayers, lobbyJoined } from '../store';
+import { lobbyJoined } from '../store';
 import { useNavigate } from '@solidjs/router';
 
 import { client } from '../utils/trpc';
@@ -35,11 +35,7 @@ export default function Home() {
       code: lobbyCode,
       nickname: nickname,
     });
-    lobbyJoined(
-      nickname,
-      lobby.code,
-      getOtherPlayers(nickname, lobby.otherNicknames)
-    );
+    lobbyJoined(nickname, lobby.code, lobby.otherNicknames);
     navigate('/lobby', { replace: true });
   };
 

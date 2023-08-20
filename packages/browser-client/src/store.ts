@@ -42,28 +42,22 @@ export const lobbyStateUpdated = (lobby: Lobby) =>
     })
   );
 
-export const getOtherPlayers = (myNickname: string, nicknames: string[]) =>
-  nicknames.filter((nn) => nn !== myNickname);
-
 const subscribeToLobby = () => {
   if (state.lobby === undefined) {
     console.warn('Attempting to subscribe to undefined lobby');
     return;
   }
 
-  client.onLobbyChanged.subscribe(
-    { code: state.lobby.lobbyCode },
-    {
-      onData(lobby) {
-        const prevLobby = state.lobby;
-        if (prevLobby !== undefined) {
-          lobbyStateUpdated({
-            lobbyCode: lobby.code,
-            nickname: prevLobby.nickname,
-            otherPlayers: getOtherPlayers(prevLobby.nickname, lobby.nicknames),
-          });
-        }
-      },
-    }
-  );
+  client.onLobbyChanged.subscribe(undefined, {
+    onData(lobby) {
+      const prevLobby = state.lobby;
+      if (prevLobby !== undefined) {
+        lobbyStateUpdated({
+          lobbyCode: lobby.code,
+          nickname: prevLobby.nickname,
+          otherPlayers: lobby.otherNicknames,
+        });
+      }
+    },
+  });
 };

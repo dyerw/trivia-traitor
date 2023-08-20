@@ -1,7 +1,17 @@
+import { produce } from 'immer';
 import type { Action } from './actions';
+import { WebSocket } from 'ws';
 
-type Session = {
-  nickname: string;
+type Session = (
+  | {
+      inLobby: false;
+    }
+  | {
+      inLobby: true;
+      nickname: string;
+    }
+) & {
+  websocket: WebSocket;
 };
 
 export type SessionsState = {
@@ -18,16 +28,24 @@ export const sessionsReducer = (
   sessionId: string
 ) => {
   switch (action.type) {
+    case 'SESSION_CONNECT': {
+      return produce(state, (draft) => {
+        draft.sessions[sessionId] = {
+          inLobby: false,
+          websocket: action.payload.websocket,
+        };
+      });
+    }
     case 'JOIN_LOBBY':
     case 'CREATE_LOBBY':
-      return {
-        ...state,
-        sessions: {
-          ...state.sessions,
-          [sessionId]: {
-            nickname: action.payload.nickname,
-          },
-        },
-      };
+      return produce(state, (draft) => {
+        draft.sessions[sessionId] = {
+          ...draft.sessions[sessionId],
+          inLobby: true,
+          nickname: action.payload.nickname,
+        };
+      });
+    default:
+      return state;
   }
 };
