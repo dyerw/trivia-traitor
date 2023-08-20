@@ -15,7 +15,9 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@trivia-traitor/realtime-server": ["packages/realtime-server/src/main.ts"]
+      "@trivia-traitor/realtime-server": [
+        "packages/realtime-server/src/main.ts"
+      ]
     }
   },
   "exclude": ["node_modules", "tmp"]

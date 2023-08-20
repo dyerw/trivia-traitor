@@ -8,6 +8,7 @@ import {
 import ws from 'ws';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import logger from './logger';
+import http from 'http';
 
 import { v4 as uuidV4 } from 'uuid';
 import { generateLobbyCode } from './utils';
@@ -100,3 +101,13 @@ process.on('SIGTERM', () => {
   handler.broadcastReconnectNotification();
   wss.close();
 });
+
+// Only used for healthchecks
+http
+  .createServer((req, res) => {
+    res.writeHead(200);
+    res.end();
+  })
+  .listen(3002, 'localhost', () => {
+    logger.info('HTTP Server listening on http://localhost:3002');
+  });
