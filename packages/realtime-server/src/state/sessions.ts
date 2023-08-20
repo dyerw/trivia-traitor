@@ -25,12 +25,12 @@ export const initialSessionsState = {
 export const sessionsReducer = (
   state: SessionsState,
   action: Action,
-  sessionId: string
+  getSessionId: () => string
 ) => {
   switch (action.type) {
     case 'SESSION_CONNECT': {
       return produce(state, (draft) => {
-        draft.sessions[sessionId] = {
+        draft.sessions[getSessionId()] = {
           inLobby: false,
           websocket: action.payload.websocket,
         };
@@ -39,6 +39,7 @@ export const sessionsReducer = (
     case 'JOIN_LOBBY':
     case 'CREATE_LOBBY':
       return produce(state, (draft) => {
+        const sessionId = getSessionId();
         draft.sessions[sessionId] = {
           ...draft.sessions[sessionId],
           inLobby: true,

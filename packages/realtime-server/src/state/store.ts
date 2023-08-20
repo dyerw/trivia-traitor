@@ -13,6 +13,8 @@ import {
 } from './sessions';
 import { LobbiesState, initialLobbiesState, lobbiesReducer } from './lobbies';
 import logger from '../logger';
+import { WebSocket } from 'ws';
+import { TRPCError } from '@trpc/server';
 
 export type State = {
   sessions: SessionsState;
@@ -24,10 +26,14 @@ const initialState = {
   lobbies: initialLobbiesState,
 };
 
-const reducer = (state: State, action: Action, sessionId: string): State => {
+const reducer = (
+  state: State,
+  action: Action,
+  getSessionId: () => string
+): State => {
   return {
-    sessions: sessionsReducer(state.sessions, action, sessionId),
-    lobbies: lobbiesReducer(state.lobbies, action, sessionId),
+    sessions: sessionsReducer(state.sessions, action, getSessionId),
+    lobbies: lobbiesReducer(state.lobbies, action, getSessionId),
   };
 };
 
@@ -35,29 +41,57 @@ type Store = BehaviorSubject<State>;
 
 export const createStore = (): Store => new BehaviorSubject(initialState);
 
+export const getSessionIdFromWebSocket =
+  (ws: WebSocket, store: Store) => () => {
+    const foundEntry = Object.entries(store.getValue().sessions.sessions).find(
+      ([, session]) => session.websocket == ws
+    );
+    if (foundEntry === undefined) {
+      logger.error(`Unable to find session id for websocket`, {
+        store: store.getValue(),
+      });
+      throw new TRPCError({
+        message: 'Session does not exist for connection',
+        code: 'INTERNAL_SERVER_ERROR',
+      });
+    }
+    return foundEntry[0];
+  };
+
 export const createSelect =
-  (sessionId: string, store: Store) =>
-  <T>(selector: (sessionId: string) => (state: State) => T) => {
-    return selector(sessionId)(store.getValue());
+  (ws: WebSocket, store: Store) =>
+  <T>(selector: (getSessionId: () => string) => (state: State) => T) => {
+    return selector(getSessionIdFromWebSocket(ws, store))(store.getValue());
   };
 
 export const createDispatch =
-  (sessionId: string, store: Store) => (action: Action) => {
-    const nextState = reducer(store.getValue(), action, sessionId);
+  (ws: WebSocket, store: Store) =>
+  (action: Action, sessionIdOverride?: string) => {
+    const nextState = reducer(
+      store.getValue(),
+      action,
+      sessionIdOverride === undefined
+        ? getSessionIdFromWebSocket(ws, store)
+        : () => sessionIdOverride
+    );
     logger.info('Action dispatched', {
       action: action,
+      nextLobbiesState: { ...nextState.lobbies },
     });
     store.next(nextState);
   };
 
 export const createObserve =
-  (sessionId: string, store: Store) =>
+  (ws: WebSocket, store: Store) =>
   <T>(
-    selector: (sessionId: string) => (state: State) => T
+    selector: (getSessionId: () => string) => (state: State) => T
   ): TRPCObservable<T, Error> => {
     const obs$ = store
       .asObservable()
-      .pipe(map(selector(sessionId)), distinctUntilChanged(_.isEqual));
+      .pipe(
+        map(selector(getSessionIdFromWebSocket(ws, store))),
+        distinctUntilChanged(_.isEqual)
+      );
     return observable<T>((emit) => {
       const subscription = obs$.pipe(tap(emit.next)).subscribe();
 

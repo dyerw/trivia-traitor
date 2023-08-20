@@ -5,18 +5,20 @@ import {
   createObserve,
   createSelect,
   createStore,
+  getSessionIdFromWebSocket,
 } from './state/store';
 import logger from './logger';
 
 const store = createStore();
 
 export const createWSContext = async (opts: CreateWSSContextFnOptions) => {
-  const sid: string = opts.res['sid'];
-  logger.debug('createWSContext', { sid });
-  const dispatch = createDispatch(sid, store);
-  const observe = createObserve(sid, store);
-  const select = createSelect(sid, store);
-  return { sid, ws: opts.res, dispatch, observe, select };
+  logger.debug('createWSContext');
+  const ws = opts.res;
+  const dispatch = createDispatch(ws, store);
+  const observe = createObserve(ws, store);
+  const select = createSelect(ws, store);
+  const getState = () => store.getValue();
+  return { ws, dispatch, observe, select, getState };
 };
 
 /**
@@ -31,16 +33,8 @@ const loggerMiddleware = t.middleware(async (opts) => {
 });
 
 const hasSessionId = t.middleware(async (opts) => {
-  const sid = opts.ctx.ws['sid'];
-  logger.debug('Validating session id', { sid: opts.ctx.ws['sid'] });
-  if (sid === undefined) {
-    throw new TRPCError({ code: 'UNAUTHORIZED' });
-  }
-  return opts.next({
-    ctx: {
-      sid,
-    },
-  });
+  getSessionIdFromWebSocket(opts.ctx.ws, store)();
+  return opts.next(opts);
 });
 
 /**

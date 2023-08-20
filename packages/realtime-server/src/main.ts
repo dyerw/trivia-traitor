@@ -9,29 +9,38 @@ import ws from 'ws';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import logger from './logger';
 import http from 'http';
+import _ from 'radash';
 
 import { v4 as uuidV4 } from 'uuid';
 import { generateLobbyCode } from './utils';
-import { webSocketSelector, clientLobbySelector } from './state/selectors';
+import { clientLobbySelector, allSessionIdsInLobby } from './state/selectors';
 import { TRPCError } from '@trpc/server';
+import { ClientLobby } from './client';
 
-const appRouter = router({
+export const appRouter = router({
   registerSession: publicProcedure
     .input(z.object({ sid: z.nullable(z.string()) }))
     .mutation(async (opts) => {
-      // Already an sid attached to this websocket
-      if (opts.ctx.sid !== undefined) {
+      if (opts.input.sid === null) {
+        const newSessionId = uuidV4();
+
+        logger.info(`Generating new sessionId ${newSessionId}`);
+
+        opts.ctx.dispatch(
+          {
+            type: 'SESSION_CONNECT',
+            payload: { websocket: opts.ctx.ws },
+          },
+          newSessionId
+        );
+        return newSessionId;
+      } else {
         logger.info(
           'registerSession called with existing sessionId on websocket'
         );
-        return opts.ctx.sid;
-      }
-
-      if (opts.input.sid === undefined) {
-        logger.info('Generating new sessionId');
-      } else {
         // Check that session id isn't used by an existing connection
-        const websocket = opts.ctx.select(webSocketSelector);
+        const websocket: ws.WebSocket | undefined =
+          opts.ctx.getState().sessions.sessions[opts.input.sid]?.websocket;
         if (
           websocket !== undefined &&
           websocket.readyState === ws.WebSocket.OPEN
@@ -47,23 +56,19 @@ const appRouter = router({
         logger.info('Using sessionId supplied by client', {
           sessionId: opts.input.sid,
         });
+        opts.ctx.dispatch(
+          {
+            type: 'SESSION_CONNECT',
+            payload: { websocket: opts.ctx.ws },
+          },
+          opts.input.sid
+        );
+        return opts.input.sid;
       }
-
-      const sid = opts.input.sid ?? uuidV4();
-
-      // Not positive that this is the best place to keep the sid,
-      // but it's available in the context this way
-      logger.info('Assigning sid to websocket', { sid });
-      opts.ctx.dispatch({
-        type: 'SESSION_CONNECT',
-        payload: { websocket: opts.ctx.ws },
-      });
-      opts.ctx.ws['sid'] = sid;
-      return sid;
     }),
   lobbyCreate: sessionProcedure
     .input(z.object({ nickname: z.string() }))
-    .mutation(async (opts) => {
+    .mutation(async (opts): Promise<ClientLobby> => {
       opts.ctx.dispatch({
         type: 'CREATE_LOBBY',
         payload: {
@@ -71,11 +76,18 @@ const appRouter = router({
           code: generateLobbyCode(),
         },
       });
-      return opts.ctx.select(clientLobbySelector);
+      const clientLobby = opts.ctx.select(clientLobbySelector);
+      if (clientLobby === undefined) {
+        throw new TRPCError({
+          message: 'LobbyCreate failed',
+          code: 'INTERNAL_SERVER_ERROR',
+        });
+      }
+      return clientLobby;
     }),
   lobbyJoin: sessionProcedure
     .input(z.object({ nickname: z.string(), code: z.string() }))
-    .mutation(async (opts) => {
+    .mutation(async (opts): Promise<ClientLobby> => {
       opts.ctx.dispatch({
         type: 'JOIN_LOBBY',
         payload: {
@@ -83,19 +95,42 @@ const appRouter = router({
           code: opts.input.code,
         },
       });
-      return opts.ctx.select(clientLobbySelector);
+      const clientLobby = opts.ctx.select(clientLobbySelector);
+      if (clientLobby === undefined) {
+        throw new TRPCError({
+          message: 'LobbyJoin failed',
+          code: 'INTERNAL_SERVER_ERROR',
+        });
+      }
+      return clientLobby;
     }),
   onLobbyChanged: sessionProcedure.subscription((opts) => {
     return opts.ctx.observe(clientLobbySelector);
   }),
-  gameStart: sessionProcedure
-    .input(z.object({ code: z.string() }))
-    .mutation((opts) => {
-      // TODO: Re-implement in redux w/e
-    }),
+  gameStart: sessionProcedure.mutation((opts) => {
+    const allSessionIds = opts.ctx.select(allSessionIdsInLobby);
+    if (allSessionIds === undefined) {
+      throw new TRPCError({
+        message: 'Cannot start game when not in lobby',
+        code: 'PRECONDITION_FAILED',
+      });
+    }
+    const traitorSessionId = _.draw(allSessionIds);
+    // TODO: Implement player limit
+    if (traitorSessionId === null) {
+      throw new TRPCError({
+        message: 'At least two players required to start game',
+        code: 'PRECONDITION_FAILED',
+      });
+    }
+    opts.ctx.dispatch({
+      type: 'START_GAME',
+      payload: {
+        traitorSessionId,
+      },
+    });
+  }),
 });
-
-export type AppRouter = typeof appRouter;
 
 const wss = new ws.Server({
   port: 3001,

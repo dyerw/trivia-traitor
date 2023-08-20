@@ -20,4 +20,10 @@ export type Action =
         code: string;
         nickname: string;
       };
+    }
+  | {
+      type: 'START_GAME';
+      payload: {
+        traitorSessionId: string;
+      };
     };

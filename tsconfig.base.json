@@ -3,6 +3,7 @@
   "compilerOptions": {
     "rootDir": ".",
     "sourceMap": true,
+    "strict": true,
     "declaration": false,
     "moduleResolution": "node",
     "emitDecoratorMetadata": true,
@@ -16,7 +17,7 @@
     "baseUrl": ".",
     "paths": {
       "@trivia-traitor/realtime-server": [
-        "packages/realtime-server/src/main.ts"
+        "packages/realtime-server/src/client.ts"
       ]
     }
   },

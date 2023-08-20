@@ -1,6 +1,4 @@
 import winston from 'winston';
-import _ from 'radash';
-import ws from 'ws';
 
 const logger = winston.createLogger({
   level: 'debug',
