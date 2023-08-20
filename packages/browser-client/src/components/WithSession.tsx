@@ -10,6 +10,7 @@ export function WithSession({ children }: ParentProps) {
 
   onMount(async () => {
     const existingSid = localStorage.getItem('sid');
+    console.log({ existingSid });
     const sid = await client.registerSession.mutate({ sid: existingSid });
     localStorage.setItem('sid', sid);
     setRegistered(true);

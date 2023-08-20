@@ -1,15 +1,11 @@
 import { createStore, produce } from 'solid-js/store';
 import { client } from './utils/trpc';
-
-type Lobby = {
-  nickname: string;
-  lobbyCode: string;
-  otherPlayers: string[];
-};
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import type { ClientLobby } from '@trivia-traitor/realtime-server';
 
 type AppState = {
   // undefined if you have not joined lobby
-  lobby?: Lobby;
+  lobby?: ClientLobby;
 };
 
 const initialState: AppState = {};
@@ -18,32 +14,17 @@ const [_state, setStateStore] = createStore(initialState);
 
 export const state = _state;
 
-export const lobbyJoined = (
-  nickname: string,
-  lobbyCode: string,
-  existingPlayers: string[] = []
-) => {
-  setStateStore(
-    produce((s) => {
-      s.lobby = {
-        nickname,
-        lobbyCode,
-        otherPlayers: existingPlayers,
-      };
-    })
-  );
+export const lobbyJoined = (clientLobby: ClientLobby) => {
+  setStateStore({ lobby: clientLobby });
   subscribeToLobby();
 };
 
-export const lobbyStateUpdated = (lobby: Lobby) =>
+export const lobbyStateUpdated = (lobby: ClientLobby) =>
   setStateStore(
     produce((s) => {
       s.lobby = lobby;
     })
   );
-
-export const getOtherPlayers = (myNickname: string, nicknames: string[]) =>
-  nicknames.filter((nn) => nn !== myNickname);
 
 const subscribeToLobby = () => {
   if (state.lobby === undefined) {
@@ -51,19 +32,16 @@ const subscribeToLobby = () => {
     return;
   }
 
-  client.onLobbyChanged.subscribe(
-    { code: state.lobby.lobbyCode },
-    {
-      onData(lobby) {
-        const prevLobby = state.lobby;
-        if (prevLobby !== undefined) {
-          lobbyStateUpdated({
-            lobbyCode: lobby.code,
-            nickname: prevLobby.nickname,
-            otherPlayers: getOtherPlayers(prevLobby.nickname, lobby.nicknames),
-          });
-        }
-      },
-    }
-  );
+  client.onLobbyChanged.subscribe(undefined, {
+    onData(lobby: ClientLobby | undefined) {
+      if (lobby === undefined) {
+        console.warn('subscribed to undefined lobby');
+        return;
+      }
+      const prevLobby = state.lobby;
+      if (prevLobby !== undefined) {
+        lobbyStateUpdated(lobby);
+      }
+    },
+  });
 };

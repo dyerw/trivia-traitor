@@ -3,6 +3,7 @@
   "compilerOptions": {
     "rootDir": ".",
     "sourceMap": true,
+    "strict": true,
     "declaration": false,
     "moduleResolution": "node",
     "emitDecoratorMetadata": true,
@@ -15,7 +16,9 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@trivia-traitor/realtime-server": ["packages/realtime-server/src/main.ts"]
+      "@trivia-traitor/realtime-server": [
+        "packages/realtime-server/src/client.ts"
+      ]
     }
   },
   "exclude": ["node_modules", "tmp"]

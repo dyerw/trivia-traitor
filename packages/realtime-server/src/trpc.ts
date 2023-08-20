@@ -1,9 +1,24 @@
 import { TRPCError, initTRPC } from '@trpc/server';
 import { CreateWSSContextFnOptions } from '@trpc/server/adapters/ws';
+import {
+  createDispatch,
+  createObserve,
+  createSelect,
+  createStore,
+  getSessionIdFromWebSocket,
+} from './state/store';
+import logger from './logger';
+
+const store = createStore();
 
 export const createWSContext = async (opts: CreateWSSContextFnOptions) => {
-  const sid = opts.res['sid'];
-  return { sid, ws: opts.res };
+  logger.debug('createWSContext');
+  const ws = opts.res;
+  const dispatch = createDispatch(ws, store);
+  const observe = createObserve(ws, store);
+  const select = createSelect(ws, store);
+  const getState = () => store.getValue();
+  return { ws, dispatch, observe, select, getState };
 };
 
 /**
@@ -12,16 +27,14 @@ export const createWSContext = async (opts: CreateWSSContextFnOptions) => {
  */
 const t = initTRPC.context<typeof createWSContext>().create();
 
+const loggerMiddleware = t.middleware(async (opts) => {
+  logger.info('Procedure Called', { path: opts.path, input: opts.input });
+  return opts.next(opts);
+});
+
 const hasSessionId = t.middleware(async (opts) => {
-  const sid = opts.ctx.ws['sid'];
-  if (sid === undefined) {
-    throw new TRPCError({ code: 'UNAUTHORIZED' });
-  }
-  return opts.next({
-    ctx: {
-      sid,
-    },
-  });
+  getSessionIdFromWebSocket(opts.ctx.ws, store)();
+  return opts.next(opts);
 });
 
 /**
@@ -29,5 +42,7 @@ const hasSessionId = t.middleware(async (opts) => {
  * that can be used throughout the router
  */
 export const router = t.router;
-export const publicProcedure = t.procedure;
-export const sessionProcedure = t.procedure.use(hasSessionId);
+export const publicProcedure = t.procedure.use(loggerMiddleware);
+export const sessionProcedure = t.procedure
+  .use(loggerMiddleware)
+  .use(hasSessionId);

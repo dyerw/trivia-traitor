@@ -4,9 +4,7 @@ import { state } from '../store';
 import { client } from '../utils/trpc';
 export default function Lobby() {
   const startGame = async () => {
-    await client.gameStart.mutate({
-      code: state.lobby?.lobbyCode || '',
-    });
+    await client.gameStart.mutate();
   };
   return (
     <div>
@@ -14,11 +12,17 @@ export default function Lobby() {
         <Navigate href={'/'} />
       </Show>
       <div>Lobby</div>
-      <div>{state.lobby?.lobbyCode}</div>
-      <div>You are: {state.lobby?.nickname}</div>
-      <div>Other Players:</div>
+      <div>{state.lobby?.code}</div>
+      <div>Players:</div>
       <ul>
-        <For each={state.lobby?.otherPlayers}>{(op) => <li>{op}</li>}</For>
+        <For each={state.lobby?.players}>
+          {(player) => (
+            <li>
+              {player.nickname} {player.isYou && '(you)'}{' '}
+              {player.isOwner && '(owner)'}
+            </li>
+          )}
+        </For>
       </ul>
       <button onClick={() => startGame()}>14</button>
     </div>

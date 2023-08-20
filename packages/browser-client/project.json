@@ -9,7 +9,7 @@
       "executor": "@nx/linter:eslint",
       "outputs": ["{options.outputFile}"],
       "options": {
-        "lintFilePatterns": ["packages/browser-client/**/*.{ts,spec.ts,tsx}"]
+        "lintFilePatterns": ["packages/browser-client/**/*.{js,ts}"]
       }
     },
     "build": {
@@ -66,6 +66,13 @@
       "options": {
         "passWithNoTests": true,
         "reportsDirectory": "../../coverage/packages/browser-client"
+      }
+    },
+    "e2e": {
+      "executor": "@nx/playwright:playwright",
+      "outputs": ["{workspaceRoot}/dist/.playwright/packages/browser-client"],
+      "options": {
+        "config": "packages/browser-client/playwright.config.ts"
       }
     }
   }

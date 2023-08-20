@@ -5,72 +5,132 @@ import {
   sessionProcedure,
   publicProcedure,
 } from './trpc';
-import { observable } from '@trpc/server/observable';
 import ws from 'ws';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
-import {
-  createLobby,
-  joinLobby,
-  subscribeToLobbyChanged,
-  Lobby,
-  startGame,
-  isLobbyOwner,
-} from './lobbies-subject';
+import logger from './logger';
+import http from 'http';
+import _ from 'radash';
 
-import { tap } from 'rxjs';
 import { v4 as uuidV4 } from 'uuid';
+import { generateLobbyCode } from './utils';
+import { clientLobbySelector, allSessionIdsInLobby } from './state/selectors';
 import { TRPCError } from '@trpc/server';
+import { ClientLobby } from './client';
 
-const appRouter = router({
+export const appRouter = router({
   registerSession: publicProcedure
     .input(z.object({ sid: z.nullable(z.string()) }))
     .mutation(async (opts) => {
-      // Already an sid attached to this websocket
-      if (opts.ctx.sid !== undefined) {
-        return opts.ctx.sid;
+      if (opts.input.sid === null) {
+        const newSessionId = uuidV4();
+
+        logger.info(`Generating new sessionId ${newSessionId}`);
+
+        opts.ctx.dispatch(
+          {
+            type: 'SESSION_CONNECT',
+            payload: { websocket: opts.ctx.ws },
+          },
+          newSessionId
+        );
+        return newSessionId;
+      } else {
+        logger.info(
+          'registerSession called with existing sessionId on websocket'
+        );
+        // Check that session id isn't used by an existing connection
+        const websocket: ws.WebSocket | undefined =
+          opts.ctx.getState().sessions.sessions[opts.input.sid]?.websocket;
+        if (
+          websocket !== undefined &&
+          websocket.readyState === ws.WebSocket.OPEN
+        ) {
+          logger.info(
+            `Websocket connection rejected because SessionID ${opts.input.sid} in use by open Websocket`
+          );
+          throw new TRPCError({
+            message: 'SessionID already in use by open websocket',
+            code: 'BAD_REQUEST',
+          });
+        }
+        logger.info('Using sessionId supplied by client', {
+          sessionId: opts.input.sid,
+        });
+        opts.ctx.dispatch(
+          {
+            type: 'SESSION_CONNECT',
+            payload: { websocket: opts.ctx.ws },
+          },
+          opts.input.sid
+        );
+        return opts.input.sid;
       }
-
-      const sid = opts.input.sid ?? uuidV4();
-
-      // Not positive that this is the best place to keep the sid,
-      // but it's available in the context this way
-      opts.ctx.ws['sid'] = sid;
-      return sid;
     }),
   lobbyCreate: sessionProcedure
     .input(z.object({ nickname: z.string() }))
-    .mutation(async (opts) => {
-      console.log(opts);
-      return createLobby(opts.input.nickname, opts.ctx.sid);
+    .mutation(async (opts): Promise<ClientLobby> => {
+      opts.ctx.dispatch({
+        type: 'CREATE_LOBBY',
+        payload: {
+          nickname: opts.input.nickname,
+          code: generateLobbyCode(),
+        },
+      });
+      const clientLobby = opts.ctx.select(clientLobbySelector);
+      if (clientLobby === undefined) {
+        throw new TRPCError({
+          message: 'LobbyCreate failed',
+          code: 'INTERNAL_SERVER_ERROR',
+        });
+      }
+      return clientLobby;
     }),
   lobbyJoin: sessionProcedure
     .input(z.object({ nickname: z.string(), code: z.string() }))
-    .mutation(async (opts) => {
-      return joinLobby(opts.input.nickname, opts.input.code);
-    }),
-  onLobbyChanged: sessionProcedure
-    .input(z.object({ code: z.string() }))
-    .subscription((opts) => {
-      return observable<Lobby>((emit) => {
-        const lobby$ = subscribeToLobbyChanged(opts.input.code);
-        const subscription = lobby$.pipe(tap(emit.next)).subscribe();
-
-        return () => {
-          subscription.unsubscribe();
-        };
+    .mutation(async (opts): Promise<ClientLobby> => {
+      opts.ctx.dispatch({
+        type: 'JOIN_LOBBY',
+        payload: {
+          nickname: opts.input.nickname,
+          code: opts.input.code,
+        },
       });
-    }),
-  gameStart: sessionProcedure
-    .input(z.object({ code: z.string() }))
-    .mutation((opts) => {
-      if (!isLobbyOwner(opts.input.code, opts.ctx.sid)) {
-        throw new TRPCError({ code: 'UNAUTHORIZED' });
+      const clientLobby = opts.ctx.select(clientLobbySelector);
+      if (clientLobby === undefined) {
+        throw new TRPCError({
+          message: 'LobbyJoin failed',
+          code: 'INTERNAL_SERVER_ERROR',
+        });
       }
-      return startGame(opts.input.code);
+      return clientLobby;
     }),
+  onLobbyChanged: sessionProcedure.subscription((opts) => {
+    return opts.ctx.observe(clientLobbySelector);
+  }),
+  gameStart: sessionProcedure.mutation((opts) => {
+    const allSessionIds = opts.ctx.select(allSessionIdsInLobby);
+    if (allSessionIds === undefined) {
+      throw new TRPCError({
+        message: 'Cannot start game when not in lobby',
+        code: 'PRECONDITION_FAILED',
+      });
+    }
+    const traitorSessionId = _.draw(allSessionIds);
+    // TODO: Implement player limit
+    if (traitorSessionId === null) {
+      throw new TRPCError({
+        message: 'At least two players required to start game',
+        code: 'PRECONDITION_FAILED',
+      });
+    }
+    opts.ctx.dispatch({
+      type: 'START_GAME',
+      payload: {
+        traitorSessionId,
+      },
+    });
+  }),
 });
-
-export type AppRouter = typeof appRouter;
 
 const wss = new ws.Server({
   port: 3001,
@@ -82,14 +142,26 @@ const handler = applyWSSHandler({
 });
 
 wss.on('connection', (ws) => {
-  console.log(`++ Connection (${wss.clients.size})`);
+  logger.info('Websocket connected', { numberOfClients: wss.clients.size });
   ws.once('close', () => {
-    console.log(`-- Connection (${wss.clients.size})`);
+    logger.info('Websocket disconnected', {
+      numberOfClients: wss.clients.size,
+    });
   });
 });
-console.log('✅ WebSocket Server listening on ws://localhost:3001');
+logger.info('WebSocket Server listening on ws://localhost:3001');
 process.on('SIGTERM', () => {
-  console.log('SIGTERM');
+  logger.info('Received SIGTERM');
   handler.broadcastReconnectNotification();
   wss.close();
 });
+
+// Only used for healthchecks
+http
+  .createServer((req, res) => {
+    res.writeHead(200);
+    res.end();
+  })
+  .listen(3002, 'localhost', () => {
+    logger.info('HTTP Server listening on http://localhost:3002');
+  });

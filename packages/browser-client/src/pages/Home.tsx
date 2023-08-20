@@ -1,8 +1,10 @@
 import { createSignal } from 'solid-js';
-import { getOtherPlayers, lobbyJoined } from '../store';
+import { lobbyJoined } from '../store';
 import { useNavigate } from '@solidjs/router';
 
 import { client } from '../utils/trpc';
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import { ClientLobby } from '@trivia-traitor/realtime-server';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -17,10 +19,10 @@ export default function Home() {
       return;
     }
 
-    const lobby = await client.lobbyCreate.mutate({
+    const lobby: ClientLobby = await client.lobbyCreate.mutate({
       nickname: nicknameInput(),
     });
-    lobbyJoined(nickname, lobby.code);
+    lobbyJoined(lobby);
     navigate('/lobby', { replace: true });
   };
 
@@ -31,15 +33,11 @@ export default function Home() {
       console.warn('Invalid nickname/lobbyCode');
       return;
     }
-    const lobby = await client.lobbyJoin.mutate({
+    const lobby: ClientLobby = await client.lobbyJoin.mutate({
       code: lobbyCode,
       nickname: nickname,
     });
-    lobbyJoined(
-      nickname,
-      lobby.code,
-      getOtherPlayers(nickname, lobby.nicknames)
-    );
+    lobbyJoined(lobby);
     navigate('/lobby', { replace: true });
   };
 
