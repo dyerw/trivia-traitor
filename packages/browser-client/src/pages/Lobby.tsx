@@ -2,6 +2,7 @@ import { For, Show } from 'solid-js';
 import { Navigate } from '@solidjs/router';
 import { state } from '../store';
 import { client } from '../utils/trpc';
+
 export default function Lobby() {
   const startGame = async () => {
     await client.gameStart.mutate();
@@ -10,6 +11,9 @@ export default function Lobby() {
     <div>
       <Show when={state.lobby === undefined}>
         <Navigate href={'/'} />
+      </Show>
+      <Show when={state.lobby?.game.isStarted}>
+        <Navigate href={'/game'} />
       </Show>
       <div>Lobby</div>
       <div>{state.lobby?.code}</div>
@@ -24,7 +28,13 @@ export default function Lobby() {
           )}
         </For>
       </ul>
-      <button onClick={() => startGame()}>14</button>
+      <Show
+        when={
+          state.lobby?.players.find((player) => player.isYou)?.isOwner ?? false
+        }
+      >
+        <button onClick={() => startGame()}>14</button>
+      </Show>
     </div>
   );
 }
