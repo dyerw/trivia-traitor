@@ -1,4 +1,4 @@
-import { TRPCError, initTRPC } from '@trpc/server';
+import { initTRPC } from '@trpc/server';
 import { CreateWSSContextFnOptions } from '@trpc/server/adapters/ws';
 import {
   createDispatch,
