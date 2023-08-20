@@ -3,6 +3,10 @@ import { Navigate } from '@solidjs/router';
 import { state } from '../store';
 
 export default function Game() {
+  const voteForAnswer = (id: string) => {
+    console.log('voting for ', id);
+  };
+
   return (
     <div>
       <Show when={state.lobby === undefined}>
@@ -25,10 +29,33 @@ export default function Game() {
               </div>
             ))}
             <div>
-              {gameState().game.youAreTraitor
+              {gameState().game.isTraitor
                 ? 'You are the traitor'
                 : 'You are not the traitor'}
             </div>
+            <div>{gameState().game.currentQuestionText}</div>
+            <div>
+              {Object.entries(gameState().game.answers).map(([id, text]) => (
+                <button onClick={() => voteForAnswer(id)}>{text}</button>
+              ))}
+            </div>
+            <Show
+              when={(() => {
+                const _gameState = gameState();
+                if (_gameState.game.isTraitor) {
+                  return _gameState.game;
+                } else {
+                  return false;
+                }
+              })()}
+            >
+              {(traitorGameState) => (
+                <>
+                  <div>{traitorGameState().correctAnswerId}</div>
+                  <div>{traitorGameState().explanation}</div>
+                </>
+              )}
+            </Show>
           </>
         )}
       </Show>

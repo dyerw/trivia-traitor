@@ -17,6 +17,8 @@ import { clientLobbySelector, allSessionIdsInLobby } from './state/selectors';
 import { TRPCError } from '@trpc/server';
 import { ClientLobby } from './client';
 
+import questions from './questions';
+
 export const appRouter = router({
   registerSession: publicProcedure
     .input(z.object({ sid: z.nullable(z.string()) }))
@@ -123,10 +125,19 @@ export const appRouter = router({
         code: 'PRECONDITION_FAILED',
       });
     }
+
+    const initialQuestionId = _.draw(Object.keys(questions));
+    if (initialQuestionId === null) {
+      throw new TRPCError({
+        message: 'There are no questions?',
+        code: 'INTERNAL_SERVER_ERROR',
+      });
+    }
     opts.ctx.dispatch({
       type: 'START_GAME',
       payload: {
         traitorSessionId,
+        initialQuestionId,
       },
     });
   }),

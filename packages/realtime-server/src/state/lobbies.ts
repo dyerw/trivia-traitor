@@ -4,6 +4,11 @@ import logger from '../logger';
 
 type Game = {
   traitorSessionId: string;
+  currentQuestionId: string;
+  // SessionId -> AnswerId
+  answerVotes: Record<string, string>;
+  questionsWrong: number;
+  questionsCorrect: number;
 };
 
 type LobbyGameState =
@@ -46,6 +51,10 @@ export const lobbiesReducer = (
           inGame: true,
           game: {
             traitorSessionId: action.payload.traitorSessionId,
+            currentQuestionId: action.payload.initialQuestionId,
+            questionsCorrect: 0,
+            questionsWrong: 0,
+            answerVotes: {},
           },
         };
       });
