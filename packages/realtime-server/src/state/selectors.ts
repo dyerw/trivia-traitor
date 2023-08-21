@@ -31,6 +31,9 @@ export const clientLobbySelector =
         lobby.gameState.game.answerVotes
       ).length;
 
+      const questionsCorrect = lobby.gameState.game.questionsCorrect;
+      const questionsWrong = lobby.gameState.game.questionsWrong;
+
       const yourVoteAnswerId: string | undefined =
         lobby.gameState.game.answerVotes[sessionId];
 
@@ -44,6 +47,8 @@ export const clientLobbySelector =
           yourVoteAnswerId,
           explanation: question.explanation,
           correctAnswerId: question.correctAnswer,
+          questionsCorrect,
+          questionsWrong,
         };
       } else {
         game = {
@@ -53,6 +58,8 @@ export const clientLobbySelector =
           answers,
           totalVotesSubmitted,
           yourVoteAnswerId,
+          questionsCorrect,
+          questionsWrong,
         };
       }
     }

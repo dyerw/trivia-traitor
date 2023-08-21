@@ -151,8 +151,16 @@ export const appRouter = router({
           answerId: opts.input.answerId,
         },
       });
-      console.log('VOTE');
     }),
+  nextQuestion: sessionProcedure.mutation((opts) => {
+    // Check in lobby, in game
+    // Check all answers are submitted
+    // Check that it's the host
+    // Probably abstract all these checks into middleware
+    opts.ctx.dispatch({
+      type: 'NEXT_QUESTION',
+    });
+  }),
 });
 
 const wss = new ws.Server({

@@ -15,6 +15,8 @@ type SharedGameState = {
   answers: Record<string, string>;
   yourVoteAnswerId?: string;
   totalVotesSubmitted: number;
+  questionsCorrect: number;
+  questionsWrong: number;
 };
 
 type NonTraitorGameState = {

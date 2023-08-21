@@ -33,4 +33,7 @@ export type Action =
       payload: {
         answerId: string;
       };
+    }
+  | {
+      type: 'NEXT_QUESTION';
     };

@@ -8,6 +8,10 @@ export default function Game() {
     client.voteForAnswer.mutate({ answerId });
   };
 
+  const nextQuestion = () => {
+    client.nextQuestion.mutate();
+  };
+
   return (
     <div>
       <Show when={state.lobby === undefined}>
@@ -35,6 +39,8 @@ export default function Game() {
                 : 'You are not the traitor'}
             </div>
             <div>Votes Submitted: {gameState().game.totalVotesSubmitted}</div>
+            <div>Questions Right: {gameState().game.questionsCorrect}</div>
+            <div>Questions Wrong: {gameState().game.questionsWrong}</div>
             <div>{gameState().game.currentQuestionText}</div>
             <Show
               when={gameState().game.yourVoteAnswerId}
@@ -74,6 +80,7 @@ export default function Game() {
           </>
         )}
       </Show>
+      <button onClick={() => nextQuestion()}>Next Question or whatever</button>
     </div>
   );
 }
