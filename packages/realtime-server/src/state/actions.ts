@@ -27,4 +27,10 @@ export type Action =
         traitorSessionId: string;
         initialQuestionId: string;
       };
+    }
+  | {
+      type: 'VOTE_FOR_ANSWER';
+      payload: {
+        answerId: string;
+      };
     };

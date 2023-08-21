@@ -1,10 +1,11 @@
 import { Show } from 'solid-js';
 import { Navigate } from '@solidjs/router';
 import { state } from '../store';
+import { client } from '../utils/trpc';
 
 export default function Game() {
-  const voteForAnswer = (id: string) => {
-    console.log('voting for ', id);
+  const voteForAnswer = (answerId: string) => {
+    client.voteForAnswer.mutate({ answerId });
   };
 
   return (
@@ -33,12 +34,26 @@ export default function Game() {
                 ? 'You are the traitor'
                 : 'You are not the traitor'}
             </div>
+            <div>Votes Submitted: {gameState().game.totalVotesSubmitted}</div>
             <div>{gameState().game.currentQuestionText}</div>
-            <div>
-              {Object.entries(gameState().game.answers).map(([id, text]) => (
-                <button onClick={() => voteForAnswer(id)}>{text}</button>
-              ))}
-            </div>
+            <Show
+              when={gameState().game.yourVoteAnswerId}
+              fallback={
+                <div>
+                  {Object.entries(gameState().game.answers).map(
+                    ([id, text]) => (
+                      <button onClick={() => voteForAnswer(id)}>{text}</button>
+                    )
+                  )}
+                </div>
+              }
+            >
+              {(yourVoteAnswerId) => (
+                <div>
+                  You answered: {gameState().game.answers[yourVoteAnswerId()]}
+                </div>
+              )}
+            </Show>
             <Show
               when={(() => {
                 const _gameState = gameState();

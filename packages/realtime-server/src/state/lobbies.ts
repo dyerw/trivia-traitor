@@ -38,6 +38,35 @@ export const lobbiesReducer = (
 ) => {
   const sessionId = getSessionId();
   switch (action.type) {
+    case 'VOTE_FOR_ANSWER':
+      return produce(state, (draft) => {
+        // You better be in a lobby
+        const lobby = draft.lobbies.find(
+          (l) =>
+            l.ownerSessionId === sessionId ||
+            l.playerSessionIds.includes(sessionId)
+        );
+        if (lobby === undefined) {
+          logger.error('cannot vote while not in lobby', {
+            sessionId,
+            lobbies: draft.lobbies,
+          });
+          return;
+        }
+        // You better be in a game
+        if (!lobby.gameState.inGame) {
+          logger.error('cannot vote while not in game', { sessionId });
+          return;
+        }
+        const answerVotes = lobby.gameState.game.answerVotes;
+        // No double voting
+        if (Object.keys(answerVotes).includes(sessionId)) {
+          logger.error('cannot vote more than once', { sessionId });
+          return;
+        }
+
+        answerVotes[sessionId] = action.payload.answerId;
+      });
     case 'START_GAME':
       return produce(state, (draft) => {
         const lobby = draft.lobbies.find((l) => l.ownerSessionId === sessionId);

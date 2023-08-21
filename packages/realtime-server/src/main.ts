@@ -141,6 +141,18 @@ export const appRouter = router({
       },
     });
   }),
+  voteForAnswer: sessionProcedure
+    .input(z.object({ answerId: z.string() }))
+    .mutation((opts) => {
+      // TODO: Deal with a whoooole bunch of error cases
+      opts.ctx.dispatch({
+        type: 'VOTE_FOR_ANSWER',
+        payload: {
+          answerId: opts.input.answerId,
+        },
+      });
+      console.log('VOTE');
+    }),
 });
 
 const wss = new ws.Server({
