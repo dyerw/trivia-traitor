@@ -1,6 +1,7 @@
-import { ClientLobby } from '../client';
+import { ClientGame, ClientLobby } from '../client';
 import { Lobby } from './lobbies';
 import { State } from './store';
+import questions from '../questions';
 
 export const clientLobbySelector =
   (getSessionId: () => string) =>
@@ -9,6 +10,7 @@ export const clientLobbySelector =
     const lobby = state.lobbies.lobbies.find((lobby) =>
       [lobby.ownerSessionId, ...lobby.playerSessionIds].includes(sessionId)
     );
+
     const allSessionIds = allSessionIdsInLobby(getSessionId)(state);
     if (lobby === undefined || allSessionIds === undefined) {
       return undefined;
@@ -17,6 +19,51 @@ export const clientLobbySelector =
       const session = state.sessions.sessions[sid];
       return session.inLobby ? session.nickname : undefined;
     };
+
+    let game: ClientGame = { isStarted: false };
+
+    if (lobby.gameState.inGame) {
+      const isStarted = true;
+      const question = questions[lobby.gameState.game.currentQuestionId];
+      const currentQuestionText = question.text;
+      const answers = question.answers;
+      const totalVotesSubmitted = Object.keys(
+        lobby.gameState.game.answerVotes
+      ).length;
+
+      const questionsCorrect = lobby.gameState.game.questionsCorrect;
+      const questionsWrong = lobby.gameState.game.questionsWrong;
+
+      const yourVoteAnswerId: string | undefined =
+        lobby.gameState.game.answerVotes[sessionId];
+
+      if (lobby.gameState.game.traitorSessionId === sessionId) {
+        game = {
+          isStarted,
+          currentQuestionText,
+          isTraitor: true,
+          answers,
+          totalVotesSubmitted,
+          yourVoteAnswerId,
+          explanation: question.explanation,
+          correctAnswerId: question.correctAnswer,
+          questionsCorrect,
+          questionsWrong,
+        };
+      } else {
+        game = {
+          isStarted,
+          currentQuestionText,
+          isTraitor: false,
+          answers,
+          totalVotesSubmitted,
+          yourVoteAnswerId,
+          questionsCorrect,
+          questionsWrong,
+        };
+      }
+    }
+
     return {
       code: lobby.code,
       players: allSessionIds.map((sid) => ({
@@ -24,12 +71,7 @@ export const clientLobbySelector =
         isOwner: sid === lobby.ownerSessionId,
         isYou: sid === sessionId,
       })),
-      game: lobby.gameState.inGame
-        ? {
-            isStarted: true,
-            youAreTraitor: lobby.gameState.game.traitorSessionId === sessionId,
-          }
-        : { isStarted: false },
+      game,
     };
   };
 

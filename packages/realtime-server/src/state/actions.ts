@@ -25,5 +25,15 @@ export type Action =
       type: 'START_GAME';
       payload: {
         traitorSessionId: string;
+        initialQuestionId: string;
       };
+    }
+  | {
+      type: 'VOTE_FOR_ANSWER';
+      payload: {
+        answerId: string;
+      };
+    }
+  | {
+      type: 'NEXT_QUESTION';
     };
