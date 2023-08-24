@@ -71,6 +71,14 @@
           "codeCoverage": true
         }
       }
+    },
+    "docker-build": {
+      "dependsOn": ["build"],
+      "command": "docker build -f packages/realtime-server/Dockerfile . -t realtime-server"
+    },
+    "deploy": {
+      "dependsOn": ["build"],
+      "command": "fly deploy --config packages/realtime-server/fly.toml"
     }
   },
   "tags": []

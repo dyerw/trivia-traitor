@@ -37,6 +37,12 @@ export const clientLobbySelector =
       const yourVoteAnswerId: string | undefined =
         lobby.gameState.game.answerVotes[sessionId];
 
+      const gameWinner = lobby.gameState.game.gameOver
+        ? lobby.gameState.game.traitorWon
+          ? 'traitor'
+          : 'team'
+        : 'ongoing';
+
       if (lobby.gameState.game.traitorSessionId === sessionId) {
         game = {
           isStarted,
@@ -49,6 +55,7 @@ export const clientLobbySelector =
           correctAnswerId: question.correctAnswer,
           questionsCorrect,
           questionsWrong,
+          gameWinner,
         };
       } else {
         game = {
@@ -60,6 +67,7 @@ export const clientLobbySelector =
           yourVoteAnswerId,
           questionsCorrect,
           questionsWrong,
+          gameWinner,
         };
       }
     }

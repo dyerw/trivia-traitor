@@ -34,6 +34,11 @@ export default function Game() {
               </div>
             ))}
             <div>
+              {gameState().game.gameWinner ? (
+                <div>{gameState().game.gameWinner} Won!</div>
+              ) : undefined}
+            </div>
+            <div>
               {gameState().game.isTraitor
                 ? 'You are the traitor'
                 : 'You are not the traitor'}

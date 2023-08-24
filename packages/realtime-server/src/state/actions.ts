@@ -1,4 +1,5 @@
 import { WebSocket } from 'ws';
+import { GameOptions } from './lobbies';
 
 export type Action =
   | {
@@ -12,6 +13,7 @@ export type Action =
       payload: {
         code: string;
         nickname: string;
+        gameOptions: GameOptions;
       };
     }
   | {

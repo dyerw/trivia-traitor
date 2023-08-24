@@ -69,13 +69,22 @@ export const appRouter = router({
       }
     }),
   lobbyCreate: sessionProcedure
-    .input(z.object({ nickname: z.string() }))
+    .input(
+      z.object({
+        nickname: z.string(),
+        gameOptions: z.object({
+          traitorRoundsRequired: z.number(),
+          nonTraitorRoundsRequired: z.number(),
+        }),
+      })
+    )
     .mutation(async (opts): Promise<ClientLobby> => {
       opts.ctx.dispatch({
         type: 'CREATE_LOBBY',
         payload: {
           nickname: opts.input.nickname,
           code: generateLobbyCode(),
+          gameOptions: opts.input.gameOptions,
         },
       });
       const clientLobby = opts.ctx.select(clientLobbySelector);
