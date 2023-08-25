@@ -48,6 +48,28 @@ export const lobbiesReducer = (
 ) => {
   const sessionId = getSessionId();
   switch (action.type) {
+    case 'CLIENT_DISCONNECT':
+      return produce(state, (draft) => {
+        const ownerLobby = draft.lobbies.find(
+          (l) => l.ownerSessionId === sessionId
+        );
+        if (ownerLobby !== undefined) {
+          const newOwner = ownerLobby.playerSessionIds[0];
+          ownerLobby.ownerSessionId = newOwner;
+          ownerLobby.playerSessionIds = ownerLobby.playerSessionIds.filter(
+            (sid) => sid !== newOwner
+          );
+        }
+        const playerLobby = draft.lobbies.find((l) =>
+          l.playerSessionIds.includes(sessionId)
+        );
+        if (playerLobby !== undefined) {
+          playerLobby.playerSessionIds = playerLobby.playerSessionIds.filter(
+            (sid) => sid !== sessionId
+          );
+        }
+        return;
+      });
     case 'NEXT_QUESTION':
       return produce(state, (draft) => {
         // FIXME: dedupe these checks, types!!!!

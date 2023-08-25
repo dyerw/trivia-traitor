@@ -14,10 +14,17 @@ const store = createStore();
 export const createWSContext = async (opts: CreateWSSContextFnOptions) => {
   logger.debug('createWSContext');
   const ws = opts.res;
+
   const dispatch = createDispatch(ws, store);
   const observe = createObserve(ws, store);
   const select = createSelect(ws, store);
   const getState = () => store.getValue();
+
+  ws.once('close', () => {
+    dispatch({ type: 'CLIENT_DISCONNECT' });
+    logger.info('Websocket disconnected');
+  });
+
   return { ws, dispatch, observe, select, getState };
 };
 

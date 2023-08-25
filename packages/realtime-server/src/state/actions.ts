@@ -3,6 +3,9 @@ import { GameOptions } from './lobbies';
 
 export type Action =
   | {
+      type: 'CLIENT_DISCONNECT';
+    }
+  | {
       type: 'SESSION_CONNECT';
       payload: {
         websocket: WebSocket;

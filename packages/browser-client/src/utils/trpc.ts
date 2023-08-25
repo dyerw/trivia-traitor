@@ -3,7 +3,8 @@ import { createTRPCProxyClient, createWSClient, wsLink } from '@trpc/client';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import type { AppRouter } from '@trivia-traitor/realtime-server';
 
-const host = process.env.HOST ?? 'localhost';
+const host = import.meta.env.HOST ?? 'localhost';
+console.log({ host });
 
 const wsClient = createWSClient({
   url: `ws://${host}:3001`,
