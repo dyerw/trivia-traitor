@@ -1,6 +1,10 @@
 import { WebSocket } from 'ws';
+import { GameOptions } from './lobbies';
 
 export type Action =
+  | {
+      type: 'CLIENT_DISCONNECT';
+    }
   | {
       type: 'SESSION_CONNECT';
       payload: {
@@ -12,6 +16,7 @@ export type Action =
       payload: {
         code: string;
         nickname: string;
+        gameOptions: GameOptions;
       };
     }
   | {

@@ -69,13 +69,22 @@ export const appRouter = router({
       }
     }),
   lobbyCreate: sessionProcedure
-    .input(z.object({ nickname: z.string() }))
+    .input(
+      z.object({
+        nickname: z.string(),
+        gameOptions: z.object({
+          traitorRoundsRequired: z.number(),
+          nonTraitorRoundsRequired: z.number(),
+        }),
+      })
+    )
     .mutation(async (opts): Promise<ClientLobby> => {
       opts.ctx.dispatch({
         type: 'CREATE_LOBBY',
         payload: {
           nickname: opts.input.nickname,
           code: generateLobbyCode(),
+          gameOptions: opts.input.gameOptions,
         },
       });
       const clientLobby = opts.ctx.select(clientLobbySelector);
@@ -163,7 +172,10 @@ export const appRouter = router({
   }),
 });
 
+const host = process.env.HOST ?? 'localhost';
+
 const wss = new ws.Server({
+  host,
   port: 3001,
 });
 const handler = applyWSSHandler({
@@ -180,7 +192,7 @@ wss.on('connection', (ws) => {
     });
   });
 });
-logger.info('WebSocket Server listening on ws://localhost:3001');
+logger.info(`WebSocket Server listening on ws://${host}:3001`);
 process.on('SIGTERM', () => {
   logger.info('Received SIGTERM');
   handler.broadcastReconnectNotification();
@@ -193,6 +205,6 @@ http
     res.writeHead(200);
     res.end();
   })
-  .listen(3002, 'localhost', () => {
-    logger.info('HTTP Server listening on http://localhost:3002');
+  .listen(3002, host, () => {
+    logger.info(`HTTP Server listening on http://${host}:3002`);
   });

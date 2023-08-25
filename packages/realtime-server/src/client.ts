@@ -3,6 +3,8 @@
  */
 import type { appRouter } from './main';
 
+export type { GameOptions } from './state/lobbies';
+
 export type AppRouter = typeof appRouter;
 
 type NotStartedState = {
@@ -17,6 +19,7 @@ type SharedGameState = {
   totalVotesSubmitted: number;
   questionsCorrect: number;
   questionsWrong: number;
+  gameWinner: 'ongoing' | 'traitor' | 'team';
 };
 
 type NonTraitorGameState = {

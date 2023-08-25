@@ -4,6 +4,12 @@ import logger from '../logger';
 import _ from 'radash';
 import questions from '../questions';
 
+export type GameOptions = {
+  // Question rounds required for win for either team
+  traitorRoundsRequired: number;
+  nonTraitorRoundsRequired: number;
+};
+
 type Game = {
   traitorSessionId: string;
   currentQuestionId: string;
@@ -12,7 +18,7 @@ type Game = {
   questionsWrong: number;
   questionsCorrect: number;
   previousQuestionIds: string[];
-};
+} & ({ gameOver: true; traitorWon: boolean } | { gameOver: false });
 
 type LobbyGameState =
   | {
@@ -26,6 +32,7 @@ export type Lobby = {
   ownerSessionId: string;
   playerSessionIds: string[];
   gameState: LobbyGameState;
+  gameOptions: GameOptions;
 };
 
 export type LobbiesState = {
@@ -41,6 +48,28 @@ export const lobbiesReducer = (
 ) => {
   const sessionId = getSessionId();
   switch (action.type) {
+    case 'CLIENT_DISCONNECT':
+      return produce(state, (draft) => {
+        const ownerLobby = draft.lobbies.find(
+          (l) => l.ownerSessionId === sessionId
+        );
+        if (ownerLobby !== undefined) {
+          const newOwner = ownerLobby.playerSessionIds[0];
+          ownerLobby.ownerSessionId = newOwner;
+          ownerLobby.playerSessionIds = ownerLobby.playerSessionIds.filter(
+            (sid) => sid !== newOwner
+          );
+        }
+        const playerLobby = draft.lobbies.find((l) =>
+          l.playerSessionIds.includes(sessionId)
+        );
+        if (playerLobby !== undefined) {
+          playerLobby.playerSessionIds = playerLobby.playerSessionIds.filter(
+            (sid) => sid !== sessionId
+          );
+        }
+        return;
+      });
     case 'NEXT_QUESTION':
       return produce(state, (draft) => {
         // FIXME: dedupe these checks, types!!!!
@@ -95,6 +124,22 @@ export const lobbiesReducer = (
           game.questionsCorrect++;
         } else {
           game.questionsWrong++;
+        }
+
+        if (game.questionsCorrect >= lobby.gameOptions.traitorRoundsRequired) {
+          // We need to use immutable data transforms to make this work without the redundant check
+          game.gameOver = true;
+          if (game.gameOver) {
+            game.traitorWon = false;
+          }
+          return;
+        }
+        if (game.questionsWrong >= lobby.gameOptions.nonTraitorRoundsRequired) {
+          game.gameOver = true;
+          if (game.gameOver) {
+            game.traitorWon = true;
+          }
+          return;
         }
 
         const validNextQuestions = Object.keys(questions).filter(
@@ -160,6 +205,7 @@ export const lobbiesReducer = (
             questionsWrong: 0,
             answerVotes: {},
             previousQuestionIds: [],
+            gameOver: false,
           },
         };
       });
@@ -184,6 +230,7 @@ export const lobbiesReducer = (
           gameState: {
             inGame: false,
           },
+          gameOptions: action.payload.gameOptions,
         });
       });
     default:
