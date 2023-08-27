@@ -12,6 +12,7 @@ type Session = (
     }
 ) & {
   websocket: WebSocket;
+  connected: boolean;
 };
 
 export type SessionsState = {
@@ -27,12 +28,24 @@ export const sessionsReducer = (
   action: Action,
   getSessionId: () => string
 ) => {
+  const sessionId = getSessionId();
   switch (action.type) {
+    case 'CLIENT_DISCONNECT': {
+      return produce(state, (draft) => {
+        draft.sessions[sessionId].connected = false;
+      });
+    }
     case 'SESSION_CONNECT': {
       return produce(state, (draft) => {
+        if (sessionId in draft.sessions) {
+          draft.sessions[sessionId].connected = true;
+          draft.sessions[sessionId].websocket = action.payload.websocket;
+          return;
+        }
         draft.sessions[getSessionId()] = {
           inLobby: false,
           websocket: action.payload.websocket,
+          connected: true,
         };
       });
     }
