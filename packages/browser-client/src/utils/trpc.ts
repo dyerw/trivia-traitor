@@ -5,10 +5,14 @@ import type { AppRouter } from '@trivia-traitor/realtime-server';
 
 console.log({ env: import.meta.env });
 const host = import.meta.env.VITE_HOST ?? 'localhost';
-console.log({ host });
+const port = import.meta.env.VITE_PORT ?? 3000;
+const isProd = import.meta.env.MODE;
+const protocol = import.meta.env.MODE === 'production' ? 'wss' : 'ws';
+const url = `${protocol}://${host}${isProd ? '' : `:${port}`}`;
+console.log({ url });
 
 const wsClient = createWSClient({
-  url: `ws://${host}:3001`,
+  url,
 });
 
 export const client = createTRPCProxyClient<AppRouter>({

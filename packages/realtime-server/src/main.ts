@@ -8,7 +8,6 @@ import {
 import ws from 'ws';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import logger from './logger';
-import http from 'http';
 import _ from 'radash';
 
 import { v4 as uuidV4 } from 'uuid';
@@ -16,6 +15,7 @@ import { generateLobbyCode } from './utils';
 import { clientLobbySelector, allSessionIdsInLobby } from './state/selectors';
 import { TRPCError } from '@trpc/server';
 import { ClientLobby } from './client';
+import express from 'express';
 
 import questions from './questions';
 
@@ -172,12 +172,21 @@ export const appRouter = router({
   }),
 });
 
+// Setup server
+
 const host = process.env.HOST ?? 'localhost';
+const port = process.env.PORT ?? 3000;
+
+const app = express();
+
+app.get('/', (req, res) => {
+  res.send('OK');
+});
 
 const wss = new ws.Server({
-  host,
-  port: 3001,
+  server: app.listen(port),
 });
+
 const handler = applyWSSHandler({
   wss,
   router: appRouter,
@@ -198,13 +207,3 @@ process.on('SIGTERM', () => {
   handler.broadcastReconnectNotification();
   wss.close();
 });
-
-// Only used for healthchecks
-http
-  .createServer((req, res) => {
-    res.writeHead(200);
-    res.end();
-  })
-  .listen(3002, host, () => {
-    logger.info(`HTTP Server listening on http://${host}:3002`);
-  });
