@@ -186,6 +186,7 @@ app.get('/', (req, res) => {
 const wss = new ws.Server({
   server: app.listen(port),
 });
+logger.info(`Express Server listening on http://${host}:${port}`);
 
 const handler = applyWSSHandler({
   wss,
@@ -201,7 +202,7 @@ wss.on('connection', (ws) => {
     });
   });
 });
-logger.info(`WebSocket Server listening on ws://${host}:3001`);
+logger.info(`WebSocket Server listening on ws://${host}:${port}`);
 process.on('SIGTERM', () => {
   logger.info('Received SIGTERM');
   handler.broadcastReconnectNotification();

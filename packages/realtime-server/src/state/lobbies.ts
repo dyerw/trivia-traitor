@@ -50,10 +50,20 @@ export const lobbiesReducer = (
   switch (action.type) {
     case 'CLIENT_DISCONNECT':
       return produce(state, (draft) => {
-        const ownerLobby = draft.lobbies.find(
+        const ownerLobyIndex = draft.lobbies.findIndex(
           (l) => l.ownerSessionId === sessionId
         );
+
+        const ownerLobby = draft.lobbies[ownerLobyIndex];
         if (ownerLobby !== undefined) {
+          // Last player has left the game, cleanup lobby
+          if (ownerLobby.playerSessionIds.length === 0) {
+            draft.lobbies = draft.lobbies.splice(
+              ownerLobyIndex,
+              ownerLobyIndex
+            );
+            return;
+          }
           const newOwner = ownerLobby.playerSessionIds[0];
           ownerLobby.ownerSessionId = newOwner;
           ownerLobby.playerSessionIds = ownerLobby.playerSessionIds.filter(
