@@ -20,5 +20,5 @@
       }
     }
   },
-  "implicitDependencies": ["browser-client-react"]
+  "implicitDependencies": ["browser-client"]
 }

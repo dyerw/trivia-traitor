@@ -1,18 +1,14 @@
 /// <reference types="vitest" />
-import { defineConfig, searchForWorkspaceRoot } from 'vite';
-import solidPlugin from 'vite-plugin-solid';
-
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 
 export default defineConfig({
-  cacheDir: '../../node_modules/.vite/browser-client',
+  cacheDir: '../../node_modules/.vite/browser-client-react',
 
   server: {
     port: 4200,
     host: 'localhost',
-    fs: {
-      allow: [searchForWorkspaceRoot(process.cwd())],
-    },
   },
 
   preview: {
@@ -20,7 +16,7 @@ export default defineConfig({
     host: 'localhost',
   },
 
-  plugins: [solidPlugin(), nxViteTsPaths()],
+  plugins: [react(), nxViteTsPaths()],
 
   // Uncomment this if you are using workers.
   // worker: {

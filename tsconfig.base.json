@@ -18,7 +18,7 @@
     "paths": {
       "@trivia-traitor/realtime-server": [
         "packages/realtime-server/src/client.ts"
-      ],
+      ]
     }
   },
   "exclude": ["node_modules", "tmp"]
