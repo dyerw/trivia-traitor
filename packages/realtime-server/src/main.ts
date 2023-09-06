@@ -40,21 +40,6 @@ export const appRouter = router({
         logger.info(
           'registerSession called with existing sessionId on websocket'
         );
-        // Check that session id isn't used by an existing connection
-        const websocket: ws.WebSocket | undefined =
-          opts.ctx.getState().sessions.sessions[opts.input.sid]?.websocket;
-        if (
-          websocket !== undefined &&
-          websocket.readyState === ws.WebSocket.OPEN
-        ) {
-          logger.info(
-            `Websocket connection rejected because SessionID ${opts.input.sid} in use by open Websocket`
-          );
-          throw new TRPCError({
-            message: 'SessionID already in use by open websocket',
-            code: 'BAD_REQUEST',
-          });
-        }
         logger.info('Using sessionId supplied by client', {
           sessionId: opts.input.sid,
         });
