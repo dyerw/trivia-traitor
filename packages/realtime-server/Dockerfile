@@ -12,7 +12,7 @@ ENV PORT=3000
 WORKDIR /app
 
 RUN addgroup --system realtime-server && \
-          adduser --system -G realtime-server realtime-server
+    adduser --system -G realtime-server realtime-server
 
 COPY dist/packages/realtime-server realtime-server
 RUN chown -R realtime-server:realtime-server .

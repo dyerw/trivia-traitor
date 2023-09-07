@@ -7,7 +7,7 @@ export type { GameOptions } from './state/lobbies';
 
 export type AppRouter = typeof appRouter;
 
-type NotStartedState = {
+type GameNotStartedState = {
   isStarted: false;
 };
 
@@ -32,9 +32,10 @@ type TraitorGameState = {
   correctAnswerId: string;
 };
 
-type StartedState = SharedGameState & (NonTraitorGameState | TraitorGameState);
+export type GameStartedState = SharedGameState &
+  (NonTraitorGameState | TraitorGameState);
 
-export type ClientGame = NotStartedState | StartedState;
+export type ClientGame = GameNotStartedState | GameStartedState;
 
 export type ClientPlayer = {
   nickname: string;

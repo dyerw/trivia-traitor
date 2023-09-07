@@ -8,7 +8,6 @@ import {
 import ws from 'ws';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import logger from './logger';
-import http from 'http';
 import _ from 'radash';
 
 import { v4 as uuidV4 } from 'uuid';
@@ -16,6 +15,7 @@ import { generateLobbyCode } from './utils';
 import { clientLobbySelector, allSessionIdsInLobby } from './state/selectors';
 import { TRPCError } from '@trpc/server';
 import { ClientLobby } from './client';
+import express from 'express';
 
 import questions from './questions';
 
@@ -40,21 +40,6 @@ export const appRouter = router({
         logger.info(
           'registerSession called with existing sessionId on websocket'
         );
-        // Check that session id isn't used by an existing connection
-        const websocket: ws.WebSocket | undefined =
-          opts.ctx.getState().sessions.sessions[opts.input.sid]?.websocket;
-        if (
-          websocket !== undefined &&
-          websocket.readyState === ws.WebSocket.OPEN
-        ) {
-          logger.info(
-            `Websocket connection rejected because SessionID ${opts.input.sid} in use by open Websocket`
-          );
-          throw new TRPCError({
-            message: 'SessionID already in use by open websocket',
-            code: 'BAD_REQUEST',
-          });
-        }
         logger.info('Using sessionId supplied by client', {
           sessionId: opts.input.sid,
         });
@@ -172,12 +157,22 @@ export const appRouter = router({
   }),
 });
 
+// Setup server
+
 const host = process.env.HOST ?? 'localhost';
+const port = process.env.PORT ?? 3000;
+
+const app = express();
+
+app.get('/', (req, res) => {
+  res.send('OK');
+});
 
 const wss = new ws.Server({
-  host,
-  port: 3001,
+  server: app.listen(port),
 });
+logger.info(`Express Server listening on http://${host}:${port}`);
+
 const handler = applyWSSHandler({
   wss,
   router: appRouter,
@@ -192,19 +187,9 @@ wss.on('connection', (ws) => {
     });
   });
 });
-logger.info(`WebSocket Server listening on ws://${host}:3001`);
+logger.info(`WebSocket Server listening on ws://${host}:${port}`);
 process.on('SIGTERM', () => {
   logger.info('Received SIGTERM');
   handler.broadcastReconnectNotification();
   wss.close();
 });
-
-// Only used for healthchecks
-http
-  .createServer((req, res) => {
-    res.writeHead(200);
-    res.end();
-  })
-  .listen(3002, host, () => {
-    logger.info(`HTTP Server listening on http://${host}:3002`);
-  });

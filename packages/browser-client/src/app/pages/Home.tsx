@@ -1,23 +1,20 @@
-import { lobbyJoined } from '../store';
-import { useNavigate } from '@solidjs/router';
-
-import { client } from '../utils/trpc';
+import { client } from '../../trpc';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { ClientLobby } from '@trivia-traitor/realtime-server';
 import CreateLobbyForm, {
   CreateLobbyFormInput,
 } from '../components/CreateLobbyForm';
 import JoinLobbyForm, { JoinLobbyFormInput } from '../components/JoinLobbyForm';
+import { useLobby } from '../hooks/use-lobby';
 
 export default function Home() {
-  const navigate = useNavigate();
+  const { lobbyJoined } = useLobby();
 
   const createLobby = async (createLobbyFormInput: CreateLobbyFormInput) => {
     const lobby: ClientLobby = await client.lobbyCreate.mutate(
       createLobbyFormInput
     );
     lobbyJoined(lobby);
-    navigate('/lobby', { replace: true });
   };
 
   const joinLobby = async (joinLobbyFormInput: JoinLobbyFormInput) => {
@@ -25,7 +22,6 @@ export default function Home() {
       joinLobbyFormInput
     );
     lobbyJoined(lobby);
-    navigate('/lobby', { replace: true });
   };
 
   return (
